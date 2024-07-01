@@ -1,0 +1,45 @@
+name: CI # workflow의 이름을 지정
+
+on:
+  push:
+    branches:
+      - deploy # deploy branche가 push 됬을때 
+  workflow_dispatch: # 수동으로 workflow 실행
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # ubuntu 최신 버전
+
+    steps:
+      - name: Checkout # 소스를 가져옴
+        uses: actions/checkout@v2
+
+      - name: Set up JDK 11 # JDK 11 셋업
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Grant execute permission for gradlew # gradlew 사용 권한 부여
+        run: chmod 777 ./gradlew
+        shell: bash
+
+      - name: Clean build test with Gradle # clean build test
+        run: ./gradlew clean build test
+        shell: bash
+        
+      - name: Make zip file # zip 파일 생성
+        run: zip -r ./$GITHUB_SHA.zip .
+        shell: bash
+
+      - name: Configure AWS credentials # AWS 자격 증명
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload to S3 # S3 업로드
+        run: aws s3 cp --region ${{ secrets.AWS_REGION }} ./$GITHUB_SHA.zip s3://${{ secrets.AWS_S3_BUCKET }}/CI/$GITHUB_SHA.zip
+
+      - name: Code Deploy # CodeDeploy에 배포 요청
+        run: aws deploy create-deployment --application-name ${{ secrets.AWS_CODEDEPLOY_NAME }} --deployment-config-name CodeDeployDefault.AllAtOnce --deployment-group-name ${{ secrets.AWS_CODEDEPLOY_GROUP }} --s3-location bucket=${{ secrets.AWS_S3_BUCKET }},bundleType=zip,key=CI/$GITHUB_SHA.zip
