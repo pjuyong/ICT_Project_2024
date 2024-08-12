@@ -35,36 +35,38 @@ service = Service(executable_path='/home/ubuntu/chromedriver-linux64/chromedrive
 driver = webdriver.Chrome(service = service, options = options)
 
 # 크롤링 함수
-while True:
-    def crawl_and_produce():
-        baseurl = 'https://cafe.naver.com/joonggonara/'
-        page = 1
-        display = 30
+def crawl_and_produce():
+    baseurl = 'https://cafe.naver.com/joonggonara/'
+    page = 1
+    display = 30
+    
+    driver.get(baseurl + 'ArticleList.nhn?search.clubid=10050146&search.page=' + str(page) + '&userDisplay=' + str(display))
+    driver.switch_to.frame('cafe_main') #iframe 전환
+    soup = bs(driver.page_source, 'html.parser')
 
-        driver.get(baseurl + 'ArticleList.nhn?search.clubid=10050146&search.page=' + str(page) + '&userDisplay=' + str(display))
-        driver.switch_to.frame('cafe_main') #iframe 전환
-        soup = bs(driver.page_source, 'html.parser')
+    # 게시글 목록 추출
+    print("게시글 추출을 실행합니다.")
+    soup = soup.find_all(class_='article-board m-tcol-c')[1]
+    datas = soup.find_all(class_= 'td_article')
 
-        print("게시글 추출을 실행합니다.")
+    for data in datas:
+        title = data.find(class_='article')
+        link = title.get('href')
+        title = title.get_text().strip()
 
-        # 게시글 목록 추출
-        soup = soup.find_all(class_='article-board m-tcol-c')[1]
-        datas = soup.find_all(class_= 'td_article')
-
-        for data in datas:
-            title = data.find(class_='article')
-            link = title.get('href')
-            title = title.get_text().strip()
-
-            match = re.serach(r'articleid=(\d+)', link)
-            titleId = match.group(1) if match else None
+        match = re.serach(r'articleid=(\d+)', link)
+        titleId = match.group(1) if match else None
             
-            print(title)
-            print(baseurl + link)
-            print(titleId)
-
+        print(title)
+        print(baseurl + link)
+        print(titleId)
         #메시지 전송
         producer.produce('naver_cafe_posts', key=titleId, value=title, callback=acked)
-        # 메시지 전송 대기
-        producer.flush()
-    time.sleep(30)
+        
+    # 메시지 전송 대기
+    producer.flush()
+
+if __name__ == "__main__":
+    while True:
+        crawl_and_produce()
+        time.sleep(30)
