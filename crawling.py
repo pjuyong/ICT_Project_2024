@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.service import Service
 from confluent_kafka import Producer
 import socket
 import time
+import re
 
 # Kafka Producer 설정
 producer_conf = {
@@ -54,10 +55,16 @@ while True:
             title = data.find(class_='article')
             link = title.get('href')
             title = title.get_text().strip()
+
+            match = re.serach(r'articleid=(\d+)', link)
+            titleId = match.group(1) if match else None
+            
             print(title)
             print(baseurl + link)
+            print(titleId)
 
         #메시지 전송
-        producer.produce('naver_cafe_posts', key=link, value=title, callback=acked)
+        producer.produce('naver_cafe_posts', key=titleId, value=title, callback=acked)
         # 메시지 전송 대기
         producer.flush()
+    time.sleep(30)
