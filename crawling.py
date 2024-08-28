@@ -9,7 +9,7 @@ import re
 
 # Kafka Producer 설정
 producer_conf = {
-    'bootstrap.servers': '172.31.32.249:9092',
+    'bootstrap.servers': '172.31.31.143:9092,172.31.32.249:9092,172.31.63.124:9092',
     'client.id': socket.gethostname()
 }
 
@@ -18,9 +18,9 @@ producer = Producer(producer_conf)
 # 메시지 전달 콜백 함수
 def acked(err, msg):
     if err is not None:
-        print(f"Failed to deliver message: {msg}: {err}")
+        print(f"Failed to deliver message: {msg.value}: {err}")
     else:
-        print(f"Message produced: {msg}")
+        print(f"Message produced: {msg.value}")
 
 # 크롬 드라이버 기본 설정
 options = webdriver.ChromeOptions()
@@ -49,12 +49,12 @@ def crawl_and_produce():
     soup = soup.find_all(class_='article-board m-tcol-c')[1]
     datas = soup.find_all(class_= 'td_article')
 
-    for data in datas:
+    for idx, data in enumerate(datas):
         title = data.find(class_='article')
         link = title.get('href')
         title = title.get_text().strip()
 
-        match = re.serach(r'articleid=(\d+)', link)
+        match = re.search(r'articleid=(\d+)', link)
         titleId = match.group(1) if match else None
             
         print(title)
@@ -62,6 +62,9 @@ def crawl_and_produce():
         print(titleId)
         #메시지 전송
         producer.produce('naver_cafe_posts', key=titleId, value=title, callback=acked)
+
+        if idx % 100 == 0:
+            producer.poll()
         
     # 메시지 전송 대기
     producer.flush()
