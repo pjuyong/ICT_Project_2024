@@ -39,7 +39,7 @@ def crawl_and_produce():
     baseurl = 'https://cafe.naver.com/joonggonara/'
     page = 1
     display = 30
-    
+
     driver.get(baseurl + 'ArticleList.nhn?search.clubid=10050146&search.page=' + str(page) + '&userDisplay=' + str(display))
     driver.switch_to.frame('cafe_main') #iframe 전환
     soup = bs(driver.page_source, 'html.parser')
@@ -51,21 +51,24 @@ def crawl_and_produce():
 
     for idx, data in enumerate(datas):
         title = data.find(class_='article')
-        link = title.get('href')
-        title = title.get_text().strip()
+        url = baseurl + title.get('href')
 
-        match = re.search(r'articleid=(\d+)', link)
+        # 중복 공백 제거 작업 및 문자열 형태로 저장
+        title = ' '.join(title.get_text().split())
+
+        # 저장된 url 에서 articleid만 백업
+        match = re.search(r'articleid=(\d+)', url)
         titleId = match.group(1) if match else None
-            
+
         print(title)
-        print(baseurl + link)
+        print(url)
         print(titleId)
         #메시지 전송
         producer.produce('naver_cafe_posts', key=titleId, value=title, callback=acked)
 
-        if idx % 100 == 0:
+        if idx % 500 == 0:
             producer.poll()
-        
+
     # 메시지 전송 대기
     producer.flush()
 
