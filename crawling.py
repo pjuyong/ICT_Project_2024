@@ -56,7 +56,7 @@ driver = webdriver.Chrome(service = service, options = options)
 def crawl_and_produce():
     baseurl = 'https://cafe.naver.com/joonggonara/'
     page = 1
-    display = 30
+    display = 50
 
     driver.get(baseurl + 'ArticleList.nhn?search.clubid=10050146&search.page=' + str(page) + '&userDisplay=' + str(display))
     driver.switch_to.frame('cafe_main') #iframe 전환
@@ -80,28 +80,33 @@ def crawl_and_produce():
         # 저장된 url 에서 articleid만 추출
         match = re.search(r'articleid=(\d+)', url)
         titleId = match.group(1) if match else None
-
+        
+        if titleId is None:
+            print("titleId 추출 실패, 다음 게시글로 넘어감")
+            continue
         print(title)
         print(url)
         print(titleId)
 
         # 최신 게시글부터 마지막 titleId까지 처리
-        if last_titleId and last_titleId >= titleId:
+        if last_titleId and int (last_titleId) >= int (titleId):
             print("마지막 게시글까지 크롤링 완료 최신 titleId " + titleId + "이전 titleId" + last_titleId)
             continue
 
         #메시지 전송
         producer.produce('naver_cafe_posts', key=titleId, value=title, callback=acked)
+        print("메시지 전송 완료")
 
         if idx % 500 == 0:
             producer.poll()
 
     # 메시지 전송 대기
     producer.flush()
-
+    
+    # 마지막 게시글 저장
     saveTitleId(titleId)
 
 if __name__ == "__main__":
     while True:
         crawl_and_produce()
-        time.sleep(5)
+        time.sleep(3)
