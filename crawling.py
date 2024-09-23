@@ -67,22 +67,23 @@ def crawl_and_produce():
 
         print(f"페이지 {page} 게시글 추출을 실행합니다.")
         soup = soup.find_all(class_='article-board m-tcol-c')[1]
-        datas = soup.find_all(class_= 'td_article')
+        datas = soup.select("#main-area > div:nth-child(4) > table > tbody > tr")
 
         for idx, data in enumerate(datas):
-            title = data.find(class_='article')
-            url = baseurl + title.get('href')
+            title = data.find(class_="article") # 제목과 url이 포함된 article 자체를 가져옴
+            url = baseurl + title.get('href') # url
+            title = ' '.join(title.get_text().split()) #bs4의 .strip()을 안쓴 이유 : 게시글 몇개는 특수 문자로 도배되어 있는데 strip 메소드는 해당 특수문자를 인식하지 못하여 공백을 제대로 제거하지 못함.
+            print(f'\ntitle : {title}\nurl : {url}')
 
-            # 중복 공백 제거 작업 및 문자열 형태로 저장
-            title = ' '.join(title.get_text().split())
+            category = data.find(class_= 'link_name').get_text().strip()
+            date = data.find(class_= 'td_date').get_text().strip()
+            print(f'category 이름 : {category}\ndate : {date}')
 
             # 저장된 url 에서 articleid만 추출
             match = re.search(r'articleid=(\d+)', url)
             titleId = match.group(1) if match else None
+            print(f'게시글 고유 id : {titleId}\n')
 
-            print(title)
-            print(url)
-            print(titleId)
             if last_titleId and int(titleId) <= int(last_titleId):
                 print(f"이전에 크롤링 된 게시물 {last_titleId}에 도달하였습니다.")
                 return
@@ -105,4 +106,4 @@ def crawl_and_produce():
 if __name__ == "__main__":
     while True:
         crawl_and_produce()
-        time.sleep(30)
+        time.sleep(60)
