@@ -94,7 +94,7 @@ def crawl_and_produce():
                 save_last_titleId = True
 
             #메시지 전송
-            producer.produce('naver_cafe_posts', key=titleId, value=title, callback=acked)
+            producer.produce('naver_cafe_posts', key=titleId, callback=acked)
 
             if idx % 500 == 0:
                 producer.poll()
@@ -104,6 +104,11 @@ def crawl_and_produce():
         page += 1
 
 if __name__ == "__main__":
-    while True:
-        crawl_and_produce()
-        time.sleep(60)
+    try:
+        while True:
+            crawl_and_produce()
+            time.sleep(60))
+    except KeyboardInterrupt:
+        print("작업 중단")
+    finally:
+        driver.quit()
